@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 
 import org.junit.Test;
 
+import evolution.dto.AnotherAnnotation;
 import evolution.dto.AnyAnnotation;
 import evolution.dto.AnyDto;
 
@@ -20,6 +21,7 @@ public class AnyUtil {
 				.parallelStream()
 				.map(x -> {
 					try {
+						x.setAccessible(true);
 						return x.get(object);
 					} catch (Exception e) {
 						return null;
@@ -38,8 +40,8 @@ public class AnyUtil {
 	}
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	public List<Field> getFieldsByAnnotationAndKeyValuePairs(Object object, Class annotationClass, Object... keyValuePairs) {
-		List<Field> fields = getFieldsByAnnotation(object, annotationClass);
+	public List<Field> getFieldsByAnnotationAndKeyValuePairs(Object object, List<Field> fields, Class annotationClass, Object... keyValuePairs) {
+		fields = fields == null ? getFieldsByAnnotation(object, annotationClass) : fields;
 		List<Field> desiredFields = new LinkedList<>();
 		for (Field field : fields) {
 			boolean isDesiredField = true;
@@ -50,7 +52,7 @@ public class AnyUtil {
 					field.setAccessible(true);
 					Annotation annotation = field.getAnnotation(annotationClass);
 					Method method = annotation.getClass().getDeclaredMethod(key);
-					if (!method.invoke(annotation).toString().equals(value)) {
+					if (!method.invoke(annotation).equals(value)) {
 						isDesiredField = false;
 						break;
 					}
@@ -67,10 +69,11 @@ public class AnyUtil {
 	}
 
 	@SuppressWarnings("rawtypes")
-	public List<Object> getInstanceVariablesByAnnotationAndKeyValuePairs(Object object, Class annotationClass, Object... keyValuePairs) {
-		return getFieldsByAnnotationAndKeyValuePairs(object, annotationClass, keyValuePairs)
+	public List<Object> getInstanceVariablesByAnnotationAndKeyValuePairs(Object object, List<Field> fields, Class annotationClass, Object... keyValuePairs) {
+		return getFieldsByAnnotationAndKeyValuePairs(object, fields, annotationClass, keyValuePairs)
 				.parallelStream().map(x -> {
 					try {
+						x.setAccessible(true);
 						return x.get(object);
 					} catch (Exception e) {
 						e.printStackTrace();
@@ -99,38 +102,5 @@ public class AnyUtil {
 		} catch (Exception e) {
 			return null;
 		}
-	}
-
-	@Test
-	public void testSetVariable() {
-		AnyDto anyDto = new AnyDto();
-		AnyUtil anyUtil = new AnyUtil();
-		anyUtil.setVariable(anyDto, "theOtherVariable", "HoHo");
-		System.out.println(anyUtil.getVariable(anyDto, "theOtherVariable"));
-	}
-
-	@Test
-	@SuppressWarnings("unchecked")
-	public void testGetVariable() {
-		AnyDto anyDto = new AnyDto();
-		AnyUtil anyUtil = new AnyUtil();
-		List<String> heros = (List<String>) anyUtil.getVariable(anyDto, "heros");
-		System.out.println(heros);
-	}
-
-	@Test
-	public void testGetFieldsByAnnotationAndKeyValuePairs() {
-		AnyDto anyDto = new AnyDto();
-		AnyUtil anyUtil = new AnyUtil();
-		List<Field> fields = anyUtil.getFieldsByAnnotationAndKeyValuePairs(anyDto, AnyAnnotation.class, "value", "anyValue");
-		System.out.println(fields);
-	}
-	
-	@Test
-	public void testGetInstanceVariablesByAnnotationAndKeyValuePairs() {
-		AnyDto anyDto = new AnyDto();
-		AnyUtil anyUtil = new AnyUtil();
-		List<Object> objects = anyUtil.getInstanceVariablesByAnnotationAndKeyValuePairs(anyDto, AnyAnnotation.class, "value", "anyValue");
-		System.out.println(objects);
 	}
 }
